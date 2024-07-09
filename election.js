@@ -131,7 +131,7 @@ function handleClick(d, placementHeaders) {
 
 async function handleData() {
   const data = await d3.csv("election.csv");
-  // SORT DATA BY NAME - makes finding places a lot easier!
+  // SORT DATA BY NAME - makes finding places for debugging a lot easier!
   data.sort((a, b) => {
     if (a["name"] < b["name"]) {
       return -1;
