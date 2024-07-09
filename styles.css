@@ -34,11 +34,13 @@ h2 {
 
 p {
   max-width: 66%;
+  font-weight: lighter;
+  text-align: center;
 }
 
 #legend {
   position: absolute;
-  top: 8%;
+  top: 25%;
   right: 5%;
 }
 

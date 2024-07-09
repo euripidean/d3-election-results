@@ -14,6 +14,7 @@ const COLORS = {
   "Alliance Party": "#F6CB2F",
   "Traditional Unionist Voice": "#FF0000",
   "Ulster Unionist Party ": "#9999FF",
+  "Speaker of the House of Commons": "#000000",
   Other: "#FF69B4",
 };
 
@@ -23,16 +24,33 @@ function clearPanel() {
 }
 
 function populatePanel(d, placementHeaders) {
+  const totalVotes = parseInt(d["total_votes"]);
   const panel = d3.select("#slide-out-panel");
   panel.append("div").attr("class", "panel-content");
   panel.append("h2").text(d["name"]);
+  const container = panel
+    .append("div")
+    .style("display", "flex")
+    .style("justify-content", "space-around");
+  container
+    .append("p")
+    .text(`TURNOUT: ${d["turnout"]}%`)
+    .style("text-align", "center");
+  container.append("p").text(`TOTAL VOTES: ${totalVotes.toLocaleString()}`);
 
   const results = {};
 
   // If the constituency had x number of parties, this should make sure we get them all.
   placementHeaders.forEach((header) => {
-    const party = d[header];
+    let party = d[header];
     const votes = d[header.replace("party", "votes")];
+    if (results.hasOwnProperty(party)) {
+      let i = 2;
+      while (results.hasOwnProperty(party + i)) {
+        i++;
+      }
+      party = party + i; // This is necessary as there can be more than one Independent candidate
+    }
     results[party] = parseInt(votes);
   });
 
@@ -48,39 +66,60 @@ function populatePanel(d, placementHeaders) {
     value: value,
   }));
 
-  console.log(pieData);
-
   const pieGen = d3.pie();
   const arcData = pieGen(pieData.map((d) => d.value));
 
-  const svgWidth = 400;
-  const svgHeight = 400;
-  const radius = Math.min(svgWidth, svgHeight) / 2;
+  const svgWidth = 375;
+  const svgHeight = 375;
+  const radius = Math.min(svgWidth, svgHeight) / 2 - 15;
 
   const arcGen = d3.arc().innerRadius(0).outerRadius(radius);
-
-  console.log(pieData);
 
   const svg = panel
     .append("svg")
     .attr("width", svgWidth)
-    .attr("height", svgHeight)
-    .style("padding", "10px");
+    .attr("height", svgHeight);
   const key = panel.append("div");
-
-  const arcLabels = d3.arc().innerRadius(150).outerRadius(150);
 
   const pieGroup = svg
     .append("g")
     .attr("transform", `translate(${svgWidth / 2}, ${svgHeight / 2})`);
-
-  const piePath = pieGroup
+  pieGroup
     .selectAll("path")
     .data(arcData)
     .enter()
     .append("path")
     .attr("d", arcGen)
-    .attr("fill", (d, i) => COLORS[pieData[i].party] || COLORS["other"]);
+    .attr("fill", (d, i) => COLORS[pieData[i].party] || COLORS["Other"]);
+
+  const legend = key
+    .selectAll("div")
+    .data(pieData)
+    .enter()
+    .append("div")
+    .style("display", "flex")
+    .style("align-items", "center")
+    .style("margin", "5px");
+  legend
+    .append("div")
+    .style("width", "20px")
+    .style("height", "20px")
+    .style("background-color", (d) => COLORS[d.party] || COLORS["Other"]);
+  legend
+    .append("span")
+    .text((d) => d.party)
+    .style("margin", "5px");
+  legend
+    .append("span")
+    .text((d) => d.value.toLocaleString())
+    .style("margin", "5px");
+  legend
+    .append("span")
+    .text(
+      (d) =>
+        Math.round((d.value / d3.sum(pieData.map((d) => d.value))) * 100) + "%"
+    )
+    .style("font-weight", "bold");
 }
 
 function handleClick(d, placementHeaders) {
@@ -92,7 +131,7 @@ function handleClick(d, placementHeaders) {
 
 async function handleData() {
   const data = await d3.csv("election.csv");
-  // SORT DATA BY NAME
+  // SORT DATA BY NAME - makes finding places a lot easier!
   data.sort((a, b) => {
     if (a["name"] < b["name"]) {
       return -1;
@@ -113,6 +152,9 @@ async function handleData() {
       parties.push(d["1st_place_party"]);
     }
   });
+
+  // sort parties alphabetically
+  parties.sort();
 
   const svg = d3.select("svg");
 
@@ -139,7 +181,23 @@ async function handleData() {
     .attr("width", squareWidth)
     .attr("height", squareHeight)
     .attr("fill", (d) => COLORS[d["1st_place_party"]])
-    .attr("stroke", "black");
+    .attr("stroke", "black")
+    .on("mouseover", (event, d) => {
+      // Add a tooltip with name of constituency
+      const tooltip = d3.select("#tooltip");
+      // should hover just above the square
+      tooltip.style("top", event.clientY - 50 + "px");
+      tooltip.style("left", event.clientX + "px");
+      tooltip.style("display", "block");
+      tooltip.style("background-color", "white");
+      tooltip.style("border", "1px solid black");
+      tooltip.style("padding", "5px");
+      tooltip.text(d["name"]);
+    })
+    .on("mouseout", () => {
+      const tooltip = d3.select("#tooltip");
+      tooltip.style("display", "none");
+    });
 
   squares.on("click", (event, d) => {
     event.stopPropagation();
@@ -155,18 +213,31 @@ async function handleData() {
   });
 
   // Legend on the right hand side of the page with all parties and colors listed
-  const legend = d3.select("#legend");
+  const legend = d3
+    .select("#legend")
+    .style("box-shadow", "0 0 5px 0 rgba(0, 0, 0, 0.2)");
   const legendItems = legend
     .selectAll("div")
     .data(parties)
     .enter()
-    .append("div");
-  legendItems.style("background-color", (d) => COLORS[d]);
-  legendItems.style("width", "150px");
-  legendItems.style("margin", "5px");
-  legendItems.style("padding", "2px");
-  legendItems.style("border", "1px solid black");
-  legendItems.text((d) => d);
+    .append("div")
+    .style("margin", "5px")
+    .style("padding", "2px")
+    .style("display", "flex");
+
+  const keys = legendItems.append("svg").attr("width", 20).attr("height", 20);
+  keys
+    .append("circle")
+    .attr("cx", 10)
+    .attr("cy", 10)
+    .attr("r", 8)
+    .style("fill", (d) => COLORS[d]);
+
+  legendItems
+    .append("text")
+    .style("padding-left", "24px")
+    .style("font-size", "14px")
+    .text((d) => d);
 }
 
 handleData();
