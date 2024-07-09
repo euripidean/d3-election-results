@@ -231,7 +231,8 @@ async function handleData() {
     .attr("cx", 10)
     .attr("cy", 10)
     .attr("r", 8)
-    .style("fill", (d) => COLORS[d]);
+    .style("fill", (d) => COLORS[d])
+    .style("stroke", "black");
 
   legendItems
     .append("text")
