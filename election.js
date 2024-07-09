@@ -14,22 +14,98 @@ const COLORS = {
   "Alliance Party": "#F6CB2F",
   "Traditional Unionist Voice": "#FF0000",
   "Ulster Unionist Party ": "#9999FF",
+  Other: "#FF69B4",
 };
 
-function showPanel() {
+function clearPanel() {
   const panel = d3.select("#slide-out-panel");
-  panel.classed("active", true);
+  panel.selectAll("*").remove();
 }
 
-function populatePanel(d, placementHeaders) {}
+function populatePanel(d, placementHeaders) {
+  const panel = d3.select("#slide-out-panel");
+  panel.append("div").attr("class", "panel-content");
+  panel.append("h2").text(d["name"]);
+
+  const results = {};
+
+  // If the constituency had x number of parties, this should make sure we get them all.
+  placementHeaders.forEach((header) => {
+    const party = d[header];
+    const votes = d[header.replace("party", "votes")];
+    results[party] = parseInt(votes);
+  });
+
+  // Remove any results that are NaN
+  Object.keys(results).forEach((key) => {
+    if (isNaN(results[key])) {
+      delete results[key];
+    }
+  });
+
+  const pieData = Object.entries(results).map(([key, value]) => ({
+    party: key,
+    value: value,
+  }));
+
+  console.log(pieData);
+
+  const pieGen = d3.pie();
+  const arcData = pieGen(pieData.map((d) => d.value));
+
+  const svgWidth = 400;
+  const svgHeight = 400;
+  const radius = Math.min(svgWidth, svgHeight) / 2;
+
+  const arcGen = d3.arc().innerRadius(0).outerRadius(radius);
+
+  console.log(pieData);
+
+  const svg = panel
+    .append("svg")
+    .attr("width", svgWidth)
+    .attr("height", svgHeight)
+    .style("padding", "10px");
+  const key = panel.append("div");
+
+  const arcLabels = d3.arc().innerRadius(150).outerRadius(150);
+
+  const pieGroup = svg
+    .append("g")
+    .attr("transform", `translate(${svgWidth / 2}, ${svgHeight / 2})`);
+
+  const piePath = pieGroup
+    .selectAll("path")
+    .data(arcData)
+    .enter()
+    .append("path")
+    .attr("d", arcGen)
+    .attr("fill", (d, i) => COLORS[pieData[i].party] || COLORS["other"]);
+}
+
+function handleClick(d, placementHeaders) {
+  clearPanel();
+  populatePanel(d, placementHeaders);
+
+  d3.select("#slide-out-panel").classed("active", true);
+}
 
 async function handleData() {
   const data = await d3.csv("election.csv");
+  // SORT DATA BY NAME
+  data.sort((a, b) => {
+    if (a["name"] < b["name"]) {
+      return -1;
+    } else if (a["name"] > b["name"]) {
+      return 1;
+    } else {
+      return 0;
+    }
+  });
   const headers = Object.keys(data[0]);
   const placementHeaders = headers.filter((header) =>
     header.includes("_place_party")
   );
-  placementHeaders.shift();
 
   const parties = [];
   data.forEach((d) => {
@@ -65,18 +141,17 @@ async function handleData() {
     .attr("fill", (d) => COLORS[d["1st_place_party"]])
     .attr("stroke", "black");
 
-  squares
-    .on("mouseover", (event, d) => {
-      showPanel();
-    })
-    .on("click", (event, d) => {
-      event.stopPropagation();
-      showPanel();
-    });
+  squares.on("click", (event, d) => {
+    event.stopPropagation();
+    handleClick(d, placementHeaders);
+  });
 
   // Hide the modal when clicking anywhere outside of it
-  d3.select("body").on("click", () => {
-    d3.select("#slide-out-panel").classed("active", false);
+  d3.select("body").on("click", (event) => {
+    const panel = document.getElementById("slide-out-panel");
+    if (!panel.contains(event.target)) {
+      d3.select("#slide-out-panel").classed("active", false);
+    }
   });
 
   // Legend on the right hand side of the page with all parties and colors listed

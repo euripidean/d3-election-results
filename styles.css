@@ -12,23 +12,41 @@ body {
   align-items: center;
 }
 
+.chart {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  margin-bottom: 50px;
+}
+
 h1 {
   font-size: 2rem;
   margin-bottom: 1rem;
   text-align: center;
 }
 
+h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+p {
+  max-width: 66%;
+}
+
 #legend {
   position: absolute;
-  top: 5%;
+  top: 8%;
   right: 5%;
 }
 
 .slide-panel {
   position: fixed;
-  left: -400px;
+  left: -420px;
   top: 0;
-  width: 400px;
+  width: 420px;
   height: 100%;
   background-color: white;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
@@ -39,4 +57,17 @@ h1 {
 
 .slide-panel.active {
   left: 0; /* Slide in */
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.panel-content svg {
+  margin: auto;
+  display: block;
 }
